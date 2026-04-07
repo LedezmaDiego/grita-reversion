@@ -2,113 +2,109 @@ import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Audio } from "expo-av";
 import { useEffect, useRef, useState } from "react";
-import { StyleSheet } from "react-native";
+import { Dimensions, ScrollView, StyleSheet } from "react-native";
 
 const POEMAS = [
-  ["Chasquea", "hasta que", "mis dedos olviden", "que fueron silencio"],
-  ["Chasquea", "hasta que", "el aire responda", "con algo más que vacío"],
-  ["Chasquea", "hasta que", "la noche se quiebre", "en el ritmo de tus manos"],
+  ["hasta que", "mis dedos olviden", "que fueron silencio"],
+  ["hasta que", "el aire responda", "con algo más que vacío"],
+  ["hasta que", "la noche se quiebre", "en el ritmo de tus manos"],
+  ["hasta que", "el eco diga tu nombre", "aunque no estés"],
+  ["hasta que", "la piel entienda", "lo que nunca dijiste"],
+  ["hasta que", "el tiempo se rinda", "ante el ritmo"],
 ];
 
+const { height } = Dimensions.get("window");
+
 export default function PantallaPrincipal() {
-  const [haySonido, setHaySonido] = useState(false);
   const [contador, setContador] = useState(0);
 
-  const [poemaIndex] = useState(0);
-  const [lineaIndex, setLineaIndex] = useState(1);
+  const [poemaIndex, setPoemaIndex] = useState(
+    Math.floor(Math.random() * POEMAS.length),
+  );
 
-  const [textoRevelado, setTextoRevelado] = useState<string[]>([]);
+  const poema = POEMAS[poemaIndex];
+
+  const [texto, setTexto] = useState<string[][]>([]);
+
+  const scrollRef = useRef<ScrollView>(null);
 
   const ultimoSonidoRef = useRef(Date.now());
-  const ultimoDecrementoRef = useRef(Date.now()); // ✅ FIX
+  const ultimoDecrementoRef = useRef(Date.now());
 
-  const progresoRef = useRef(0);
-  const restoRef = useRef(0);
   const contadorAnteriorRef = useRef(0);
+  const restoRef = useRef(0);
 
-  const lineaActual = POEMAS[poemaIndex][lineaIndex];
+  // 🔥 ESTE ES EL FIX DEL LOOP
+  const cambioRealizadoRef = useRef(false);
 
-  // Inicializar línea
+  // 🔤 inicializar poema
   useEffect(() => {
-    if (!lineaActual) return;
-
-    setTextoRevelado(
-      lineaActual.split("").map((char) => (char === " " ? " " : "◼️")),
+    const inicial = poema.map((linea) =>
+      linea.split("").map((c) => (c === " " ? " " : "*")),
     );
 
-    progresoRef.current = 0;
+    setTexto(inicial);
+
+    // reset scroll arriba
+    setTimeout(() => {
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
+    }, 50);
+
+    // reset progreso
     restoRef.current = 0;
     contadorAnteriorRef.current = 0;
+  }, [poemaIndex]);
 
-    setContador(0); // ✅ FIX: evita acumulación entre líneas
-  }, [lineaIndex]);
-
-  // DETECCIÓN DE SONIDO (sin cambios)
+  // 🎤 DETECCIÓN SONIDO
   useEffect(() => {
     let grabacion: Audio.Recording | null = null;
 
-    async function iniciarDeteccionDeSonido() {
-      try {
-        const permiso = await Audio.requestPermissionsAsync();
-        if (!permiso.granted) return;
+    async function iniciar() {
+      const permiso = await Audio.requestPermissionsAsync();
+      if (!permiso.granted) return;
 
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+      });
 
-        grabacion = new Audio.Recording();
+      grabacion = new Audio.Recording();
 
-        await grabacion.prepareToRecordAsync({
-          isMeteringEnabled: true,
-          android: {
-            extension: ".m4a",
-            outputFormat: 2,
-            audioEncoder: 3,
-            sampleRate: 44100,
-            numberOfChannels: 1,
-            bitRate: 128000,
-          },
-          ios: {
-            extension: ".m4a",
-            audioQuality: 2,
-            sampleRate: 44100,
-            numberOfChannels: 1,
-            bitRate: 128000,
-          },
-          web: {},
-        });
+      await grabacion.prepareToRecordAsync({
+        isMeteringEnabled: true,
+        android: {
+          extension: ".m4a",
+          outputFormat: 2,
+          audioEncoder: 3,
+        },
+        ios: {
+          extension: ".m4a",
+          audioQuality: 2,
+        },
+        web: {},
+      });
 
-        grabacion.setProgressUpdateInterval(100);
+      grabacion.setProgressUpdateInterval(100);
+      await grabacion.startAsync();
 
-        await grabacion.startAsync();
+      grabacion.setOnRecordingStatusUpdate((status) => {
+        if (status.metering == null) return;
 
-        grabacion.setOnRecordingStatusUpdate((status) => {
-          if (status.metering == null) return;
-
-          const hayRuido = status.metering > -45;
-          setHaySonido(hayRuido);
-
-          if (hayRuido) {
-            ultimoSonidoRef.current = Date.now();
-            setContador((c) => c + 1);
-          }
-        });
-      } catch (error) {
-        console.log(error);
-      }
+        if (status.metering > -45) {
+          ultimoSonidoRef.current = Date.now();
+          setContador((c) => c + 1);
+        }
+      });
     }
 
-    iniciarDeteccionDeSonido();
+    iniciar();
 
     return () => {
-      if (grabacion) {
-        grabacion.stopAndUnloadAsync().catch(() => {});
-      }
+      grabacion?.stopAndUnloadAsync().catch(() => {});
     };
   }, []);
 
-  // 🔥 DECREMENTO PROGRESIVO CORREGIDO
+  // ⏳ decremento
   useEffect(() => {
     const interval = setInterval(() => {
       const ahora = Date.now();
@@ -116,23 +112,22 @@ export default function PantallaPrincipal() {
 
       let delay: number | null = null;
 
-      if (diff > 4000) delay = 500;
-      else if (diff > 3000) delay = 1000;
-      else if (diff > 2000) delay = 2000;
+      if (diff > 1500) delay = 50;
+      else if (diff > 1000) delay = 250;
+      else if (diff > 500) delay = 500;
 
       if (!delay) return;
 
       if (ahora - ultimoDecrementoRef.current > delay) {
         ultimoDecrementoRef.current = ahora;
-
         setContador((c) => (c > 0 ? c - 1 : 0));
       }
-    }, 100);
+    }, 50);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Progreso (liberar / ocultar letras)
+  // 🔥 PROGRESO GLOBAL
   useEffect(() => {
     const diff = contador - contadorAnteriorRef.current;
     contadorAnteriorRef.current = contador;
@@ -150,75 +145,128 @@ export default function PantallaPrincipal() {
     }
   }, [contador]);
 
-  function revelarLetra() {
-    setTextoRevelado((prev) => {
-      const indices = prev
-        .map((char, i) => (char === "◼️" ? i : null))
-        .filter((i) => i !== null) as number[];
+  // 🔥 CAMBIO DE POEMA SIN LOOP
+  useEffect(() => {
+    if (contador !== 0) {
+      cambioRealizadoRef.current = false;
+      return;
+    }
 
-      if (indices.length === 0) {
-        avanzarLinea();
-        return prev;
+    if (cambioRealizadoRef.current) return;
+
+    const todoBloqueado = texto.every((linea) =>
+      linea.every((c) => c === "*" || c === " "),
+    );
+
+    if (!todoBloqueado) return;
+
+    cambioRealizadoRef.current = true;
+
+    setPoemaIndex((prev) => {
+      let nuevo = prev;
+      while (nuevo === prev) {
+        nuevo = Math.floor(Math.random() * POEMAS.length);
+      }
+      return nuevo;
+    });
+  }, [contador, texto]);
+
+  function revelarLetra() {
+    setTexto((prev) => {
+      const nuevo = prev.map((l) => [...l]);
+
+      for (let linea = 0; linea < nuevo.length; linea++) {
+        const indices = nuevo[linea]
+          .map((c, i) => (c === "*" ? i : null))
+          .filter((i) => i !== null) as number[];
+
+        if (indices.length > 0) {
+          const i = indices[Math.floor(Math.random() * indices.length)];
+          nuevo[linea][i] = poema[linea][i];
+
+          scrollRef.current?.scrollTo({
+            y: (linea + 1) * (height * 0.25),
+            animated: true,
+          });
+
+          return nuevo;
+        }
       }
 
-      const randomIndex = indices[Math.floor(Math.random() * indices.length)];
-
-      const nuevo = [...prev];
-      nuevo[randomIndex] = lineaActual[randomIndex];
-
-      return nuevo;
+      return prev;
     });
   }
 
   function ocultarLetra() {
-    setTextoRevelado((prev) => {
-      const indices = prev
-        .map((char, i) => (char !== "◼️" && char !== " " ? i : null))
-        .filter((i) => i !== null) as number[];
+    setTexto((prev) => {
+      const nuevo = prev.map((l) => [...l]);
 
-      if (indices.length === 0) return prev;
+      for (let linea = nuevo.length - 1; linea >= 0; linea--) {
+        const indices = nuevo[linea]
+          .map((c, i) => (c !== "*" && c !== " " ? i : null))
+          .filter((i) => i !== null) as number[];
 
-      const randomIndex = indices[Math.floor(Math.random() * indices.length)];
+        if (indices.length > 0) {
+          const i = indices[Math.floor(Math.random() * indices.length)];
+          nuevo[linea][i] = "*";
 
-      const nuevo = [...prev];
-      nuevo[randomIndex] = "◼️";
+          scrollRef.current?.scrollTo({
+            y: (linea + 1) * (height * 0.25),
+            animated: true,
+          });
 
-      return nuevo;
+          return nuevo;
+        }
+      }
+
+      return prev;
     });
-  }
-
-  function avanzarLinea() {
-    setLineaIndex((i) => i + 1);
   }
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText type="title">Chasquea</ThemedText>
+      <ThemedText style={styles.contador}>{Math.floor(contador)}</ThemedText>
 
-      {lineaActual && (
-        <ThemedText style={styles.texto}>{textoRevelado.join("")}</ThemedText>
-      )}
+      <ScrollView ref={scrollRef} style={styles.scroll}>
+        <ThemedText style={styles.titulo}>Chasquea</ThemedText>
 
-      <ThemedText style={styles.contador}>
-        Contador: {Math.floor(contador)}
-      </ThemedText>
+        {texto.map((linea, i) => (
+          <ThemedText key={i} style={styles.linea}>
+            {linea.join("")}
+          </ThemedText>
+        ))}
+      </ScrollView>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  texto: {
-    marginTop: 20,
-    fontSize: 18,
-    textAlign: "center",
-  },
+  container: { flex: 1 },
+
   contador: {
-    marginTop: 20,
-    opacity: 0.5,
+    position: "absolute",
+    top: 40,
+    left: 20,
+    fontSize: 18,
+    zIndex: 10,
+  },
+
+  titulo: {
+    fontSize: 32,
+    lineHeight: 40,
+    textAlign: "center",
+    marginTop: height * 0.15,
+    marginBottom: height * 0.2,
+  },
+
+  scroll: {
+    marginTop: 120,
+  },
+
+  linea: {
+    fontSize: 20,
+    lineHeight: 28,
+    textAlign: "center",
+    marginVertical: height * 0.2,
   },
 });
