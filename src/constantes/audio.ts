@@ -1,0 +1,17 @@
+export const UMBRAL_DE_SONIDO = -45;
+
+export const INTERVALO_ACTUALIZACION_AUDIO = 100;
+
+export const DELAYS_DE_DECREMENTO = {
+  RAPIDO: 50,
+  MEDIO: 250,
+  LENTO: 500,
+};
+
+export const TIEMPOS_DE_INACTIVIDAD = {
+  CORTO: 500,
+  MEDIO: 1000,
+  LARGO: 1500,
+};
+
+export const UNIDAD_DE_PROGRESO = 5;
