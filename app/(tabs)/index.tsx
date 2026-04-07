@@ -79,11 +79,12 @@ export default function PantallaPrincipal() {
   const cambioRealizadoRef = useRef(false);
 
   const ultimoScrollRef = useRef(0);
-
   const posicionesRef = useRef<number[]>([]);
 
-  // 🧠 NUEVO: saber si está completamente revelado
   const todoReveladoRef = useRef(false);
+
+  // 🔥 NUEVO: control correcto del reset de scroll
+  const resetScrollRef = useRef(false);
 
   // inicializar poema
   useEffect(() => {
@@ -93,14 +94,32 @@ export default function PantallaPrincipal() {
 
     setTexto(inicial);
 
-    setTimeout(() => {
-      scrollRef.current?.scrollTo({ y: 0, animated: true });
-    }, 50);
-
     restoRef.current = 0;
     contadorAnteriorRef.current = 0;
     posicionesRef.current = [];
+    ultimoScrollRef.current = 0;
+
+    // marcar que hay que hacer scroll cuando layout esté listo
+    resetScrollRef.current = true;
   }, [poemaIndex]);
+
+  // 🔥 FIX REAL DEL SCROLL
+  useEffect(() => {
+    if (!resetScrollRef.current) return;
+
+    if (posicionesRef.current.length === 0) return;
+
+    const primera = posicionesRef.current[0];
+
+    if (primera != null) {
+      scrollRef.current?.scrollTo({
+        y: 0,
+        animated: true,
+      });
+
+      resetScrollRef.current = false;
+    }
+  }, [texto]);
 
   // detectar si todo está revelado
   useEffect(() => {
@@ -152,7 +171,6 @@ export default function PantallaPrincipal() {
         if (status.metering > -45) {
           ultimoSonidoRef.current = Date.now();
 
-          // 🔒 límite cuando está todo revelado
           setContador((c) => {
             if (todoReveladoRef.current) return c;
             return c + 1;
