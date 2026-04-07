@@ -80,6 +80,9 @@ export default function PantallaPrincipal() {
         ios: {
           extension: ".m4a",
           audioQuality: 2,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
         },
         web: {},
       });
