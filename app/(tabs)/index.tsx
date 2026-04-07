@@ -5,12 +5,54 @@ import { useEffect, useRef, useState } from "react";
 import { Dimensions, ScrollView, StyleSheet } from "react-native";
 
 const POEMAS = [
-  ["hasta que", "mis dedos olviden", "que fueron silencio"],
-  ["hasta que", "el aire responda", "con algo más que vacío"],
-  ["hasta que", "la noche se quiebre", "en el ritmo de tus manos"],
-  ["hasta que", "el eco diga tu nombre", "aunque no estés"],
-  ["hasta que", "la piel entienda", "lo que nunca dijiste"],
-  ["hasta que", "el tiempo se rinda", "ante el ritmo"],
+  [
+    "hasta que",
+    "mis dedos olviden",
+    "que fueron silencio",
+    "y aprendan a decirte",
+    "todo lo que guardé",
+    "en noches sin respuesta",
+  ],
+  [
+    "hasta que",
+    "el aire responda",
+    "con algo más que vacío",
+    "y deje de esquivarme",
+    "cuando digo tu nombre",
+    "como si aún doliera",
+  ],
+  [
+    "hasta que",
+    "la noche se quiebre",
+    "en el ritmo de tus manos",
+    "y el tiempo se detenga",
+    "justo antes del olvido",
+    "para volver a empezar",
+  ],
+  [
+    "hasta que",
+    "el eco diga tu nombre",
+    "aunque no estés",
+    "aunque nadie escuche",
+    "aunque todo se apague",
+    "menos esta insistencia",
+  ],
+  [
+    "hasta que",
+    "la piel entienda",
+    "lo que nunca dijiste",
+    "y traduzca en latidos",
+    "lo que quedó pendiente",
+    "entre dos silencios",
+  ],
+  [
+    "hasta que",
+    "el tiempo se rinda",
+    "ante el ritmo",
+    "y deje de empujarme",
+    "hacia días sin vos",
+    "donde todo es más lento",
+  ],
 ];
 
 const { height } = Dimensions.get("window");
@@ -34,10 +76,16 @@ export default function PantallaPrincipal() {
   const contadorAnteriorRef = useRef(0);
   const restoRef = useRef(0);
 
-  // 🔥 ESTE ES EL FIX DEL LOOP
   const cambioRealizadoRef = useRef(false);
 
-  // 🔤 inicializar poema
+  const ultimoScrollRef = useRef(0);
+
+  const posicionesRef = useRef<number[]>([]);
+
+  // 🧠 NUEVO: saber si está completamente revelado
+  const todoReveladoRef = useRef(false);
+
+  // inicializar poema
   useEffect(() => {
     const inicial = poema.map((linea) =>
       linea.split("").map((c) => (c === " " ? " " : "*")),
@@ -45,17 +93,25 @@ export default function PantallaPrincipal() {
 
     setTexto(inicial);
 
-    // reset scroll arriba
     setTimeout(() => {
       scrollRef.current?.scrollTo({ y: 0, animated: true });
     }, 50);
 
-    // reset progreso
     restoRef.current = 0;
     contadorAnteriorRef.current = 0;
+    posicionesRef.current = [];
   }, [poemaIndex]);
 
-  // 🎤 DETECCIÓN SONIDO
+  // detectar si todo está revelado
+  useEffect(() => {
+    const completo = texto.every((linea, i) =>
+      linea.every((c, j) => c === poema[i][j] || c === " "),
+    );
+
+    todoReveladoRef.current = completo;
+  }, [texto, poema]);
+
+  // DETECCIÓN SONIDO
   useEffect(() => {
     let grabacion: Audio.Recording | null = null;
 
@@ -95,7 +151,12 @@ export default function PantallaPrincipal() {
 
         if (status.metering > -45) {
           ultimoSonidoRef.current = Date.now();
-          setContador((c) => c + 1);
+
+          // 🔒 límite cuando está todo revelado
+          setContador((c) => {
+            if (todoReveladoRef.current) return c;
+            return c + 1;
+          });
         }
       });
     }
@@ -107,7 +168,7 @@ export default function PantallaPrincipal() {
     };
   }, []);
 
-  // ⏳ decremento
+  // decremento progresivo
   useEffect(() => {
     const interval = setInterval(() => {
       const ahora = Date.now();
@@ -130,7 +191,7 @@ export default function PantallaPrincipal() {
     return () => clearInterval(interval);
   }, []);
 
-  // 🔥 PROGRESO GLOBAL
+  // progreso global
   useEffect(() => {
     const diff = contador - contadorAnteriorRef.current;
     contadorAnteriorRef.current = contador;
@@ -148,7 +209,7 @@ export default function PantallaPrincipal() {
     }
   }, [contador]);
 
-  // 🔥 CAMBIO DE POEMA SIN LOOP
+  // cambio de poema
   useEffect(() => {
     if (contador !== 0) {
       cambioRealizadoRef.current = false;
@@ -174,6 +235,21 @@ export default function PantallaPrincipal() {
     });
   }, [contador, texto]);
 
+  function scrollSuave(linea: number) {
+    const ahora = Date.now();
+
+    if (ahora - ultimoScrollRef.current > 200) {
+      ultimoScrollRef.current = ahora;
+
+      const y = posicionesRef.current[linea] ?? 0;
+
+      scrollRef.current?.scrollTo({
+        y: y - height * 0.3,
+        animated: true,
+      });
+    }
+  }
+
   function revelarLetra() {
     setTexto((prev) => {
       const nuevo = prev.map((l) => [...l]);
@@ -187,11 +263,7 @@ export default function PantallaPrincipal() {
           const i = indices[Math.floor(Math.random() * indices.length)];
           nuevo[linea][i] = poema[linea][i];
 
-          scrollRef.current?.scrollTo({
-            y: (linea + 1) * (height * 0.25),
-            animated: true,
-          });
-
+          scrollSuave(linea);
           return nuevo;
         }
       }
@@ -213,11 +285,7 @@ export default function PantallaPrincipal() {
           const i = indices[Math.floor(Math.random() * indices.length)];
           nuevo[linea][i] = "*";
 
-          scrollRef.current?.scrollTo({
-            y: (linea + 1) * (height * 0.25),
-            animated: true,
-          });
-
+          scrollSuave(linea);
           return nuevo;
         }
       }
@@ -230,11 +298,17 @@ export default function PantallaPrincipal() {
     <ThemedView style={styles.container}>
       <ThemedText style={styles.contador}>{Math.floor(contador)}</ThemedText>
 
-      <ScrollView ref={scrollRef} style={styles.scroll}>
+      <ScrollView ref={scrollRef} style={styles.scroll} scrollEnabled={false}>
         <ThemedText style={styles.titulo}>Chasquea</ThemedText>
 
         {texto.map((linea, i) => (
-          <ThemedText key={i} style={styles.linea}>
+          <ThemedText
+            key={i}
+            style={styles.linea}
+            onLayout={(e) => {
+              posicionesRef.current[i] = e.nativeEvent.layout.y;
+            }}
+          >
             {linea.join("")}
           </ThemedText>
         ))}
