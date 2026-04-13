@@ -1,8 +1,7 @@
 import { ThemedText } from "@/components/themed-text";
-import { ThemedView } from "@/components/themed-view";
 import { Audio } from "expo-av";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, StyleSheet, View } from "react-native";
+import { Animated, Dimensions, StyleSheet, View } from "react-native";
 
 const POEMAS = [
   [
@@ -66,6 +65,9 @@ export default function PantallaPrincipal() {
 
   const poema = POEMAS[poemaIndex];
 
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const intensidadAnim = useRef(new Animated.Value(0)).current;
+
   const ultimoSonidoRef = useRef(Date.now());
   const ultimoDecrementoRef = useRef(Date.now());
   const contadorPrevioRef = useRef(0);
@@ -79,10 +81,19 @@ export default function PantallaPrincipal() {
     );
 
     setTexto(inicial);
-
     restoRef.current = 0;
     contadorPrevioRef.current = 0;
   }, [poema]);
+
+  useEffect(() => {
+    const intensidad = Math.min(contador / 50, 1);
+
+    Animated.timing(intensidadAnim, {
+      toValue: intensidad,
+      duration: 200,
+      useNativeDriver: true,
+    }).start();
+  }, [contador]);
 
   useEffect(() => {
     todoReveladoRef.current = texto.every((linea, i) =>
@@ -159,7 +170,6 @@ export default function PantallaPrincipal() {
     return () => clearInterval(interval);
   }, []);
 
-  // 🔓 Revelar
   const revelarLetra = useCallback(() => {
     setTexto((prev) => {
       const nuevo = prev.map((l) => [...l]);
@@ -205,19 +215,15 @@ export default function PantallaPrincipal() {
     const diff = contador - anterior;
 
     restoRef.current += diff;
-    // para pruebas rapidas colocar en 1, luego en 5 para normalidad (que sino grito como vaca)
-    while (restoRef.current >= 1) {
+
+    while (restoRef.current >= 5) {
       revelarLetra();
-      restoRef.current -= 1;
+      restoRef.current -= 5;
     }
 
-    while (restoRef.current <= -1) {
+    while (restoRef.current <= -5) {
       ocultarLetra();
-      restoRef.current += 1;
-    }
-
-    if (anterior === 0 && contador > 0) {
-      cambioPostpuestoRef.current = false;
+      restoRef.current += 5;
     }
 
     if (anterior > 0 && contador === 0) {
@@ -239,48 +245,113 @@ export default function PantallaPrincipal() {
 
     cambioPostpuestoRef.current = false;
 
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
     setPoemaIndex((prev) => {
       const posibles = POEMAS.map((_, i) => i).filter((i) => i !== prev);
       return posibles[Math.floor(Math.random() * posibles.length)];
     });
   }, [texto, contador]);
 
+  const scale = intensidadAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.05],
+  });
+
+  const opacity = intensidadAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.6, 1],
+  });
+
+  const colorValue = Animated.add(fadeAnim, intensidadAnim);
+
   return (
-    <ThemedView style={styles.container}>
+    <View style={styles.container}>
+      <Animated.View
+        style={[
+          styles.background,
+          {
+            opacity: intensidadAnim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0.3, 0.6],
+            }),
+          },
+        ]}
+      />
+
       <ThemedText style={styles.contador}>{contador}</ThemedText>
 
-      <View style={styles.contenido}>
+      <Animated.View
+        style={[
+          styles.contenido,
+          {
+            transform: [{ scale }],
+            opacity: fadeAnim,
+          },
+        ]}
+      >
         <ThemedText style={styles.titulo}>Chasquea</ThemedText>
 
         {texto.map((linea, i) => (
-          <ThemedText key={i} style={styles.linea}>
+          <Animated.Text
+            key={i}
+            style={[
+              styles.linea,
+              {
+                opacity,
+                color: colorValue.interpolate({
+                  inputRange: [0, 1, 2],
+                  outputRange: ["#999999", "#ffffff", "#ffd966"],
+                }),
+              },
+            ]}
+          >
             {linea.join("")}
-          </ThemedText>
+          </Animated.Text>
         ))}
-      </View>
-    </ThemedView>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: "center", alignItems: "center" },
+  container: {
+    flex: 1,
+    backgroundColor: "#0a0a0a",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  background: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#1a1a2e",
+  },
   contador: {
     position: "absolute",
     top: 40,
     left: 20,
     fontSize: 18,
-    zIndex: 10,
-  },
-  titulo: {
-    fontSize: 28,
-    lineHeight: 36,
-    textAlign: "center",
-    marginBottom: height * 0.08,
-    fontWeight: "bold",
+    color: "#aaa",
   },
   contenido: {
     width: "90%",
-    justifyContent: "center",
+    alignItems: "center",
+  },
+  titulo: {
+    fontSize: 28,
+    marginBottom: height * 0.08,
+    color: "#fff",
+    fontWeight: "bold",
   },
   linea: {
     fontSize: 16,
