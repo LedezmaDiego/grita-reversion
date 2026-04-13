@@ -83,10 +83,8 @@ export default function PantallaPrincipal() {
 
   const todoReveladoRef = useRef(false);
 
-  // 🔥 NUEVO: control correcto del reset de scroll
   const resetScrollRef = useRef(false);
 
-  // inicializar poema
   useEffect(() => {
     const inicial = poema.map((linea) =>
       linea.split("").map((c) => (c === " " ? " " : "*")),
@@ -99,11 +97,9 @@ export default function PantallaPrincipal() {
     posicionesRef.current = [];
     ultimoScrollRef.current = 0;
 
-    // marcar que hay que hacer scroll cuando layout esté listo
     resetScrollRef.current = true;
   }, [poemaIndex]);
 
-  // 🔥 FIX REAL DEL SCROLL
   useEffect(() => {
     if (!resetScrollRef.current) return;
 
@@ -121,7 +117,6 @@ export default function PantallaPrincipal() {
     }
   }, [texto]);
 
-  // detectar si todo está revelado
   useEffect(() => {
     const completo = texto.every((linea, i) =>
       linea.every((c, j) => c === poema[i][j] || c === " "),
@@ -130,7 +125,6 @@ export default function PantallaPrincipal() {
     todoReveladoRef.current = completo;
   }, [texto, poema]);
 
-  // DETECCIÓN SONIDO
   useEffect(() => {
     let grabacion: Audio.Recording | null = null;
 
@@ -186,7 +180,6 @@ export default function PantallaPrincipal() {
     };
   }, []);
 
-  // decremento progresivo
   useEffect(() => {
     const interval = setInterval(() => {
       const ahora = Date.now();
@@ -209,7 +202,6 @@ export default function PantallaPrincipal() {
     return () => clearInterval(interval);
   }, []);
 
-  // progreso global
   useEffect(() => {
     const diff = contador - contadorAnteriorRef.current;
     contadorAnteriorRef.current = contador;
@@ -227,7 +219,6 @@ export default function PantallaPrincipal() {
     }
   }, [contador]);
 
-  // cambio de poema
   useEffect(() => {
     if (contador !== 0) {
       cambioRealizadoRef.current = false;
