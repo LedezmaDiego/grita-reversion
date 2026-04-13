@@ -1,50 +1,195 @@
-# Welcome to your Expo app 👋
+# Chasquea (App Mobile)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplicación interactiva basada en sonido donde el usuario debe chasquear con sus dedos fuertemente para revelar progresivamente un poema.
 
-## Get started
+La intensidad del sonido controla tanto el avance del texto como las animaciones en pantalla.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Funcionalidades principales
 
-2. Start the app
+- Detección de sonido en tiempo real mediante micrófono
+- Contador dinámico basado en intensidad de audio
+- Revelado progresivo de texto
+- Ocultamiento automático cuando no hay sonido
+- Transiciones animadas entre poemas
+- Animaciones reactivas (escala, opacidad, color)
 
-   ```bash
-   npx expo start
-   ```
+---
 
-In the output, you'll find options to open the app in a
+## Requisitos previos
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Antes de comenzar, instalar:
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+### 1. Node.js
 
-## Get a fresh project
+https://nodejs.org  
+Se recomienda versión LTS.
 
-When you're ready, run:
+---
+
+### 2. Bun
+
+https://bun.sh
+
+---
+
+### 3. Git
+
+https://git-scm.com/
+
+---
+
+### 4. Expo Go (opcional)
+
+Para probar en dispositivo móvil:
+
+- Android: Play Store
+- iOS: App Store
+
+---
+
+## Descargar el proyecto
 
 ```bash
-npm run reset-project
+git clone <URL_DEL_REPO>
+cd grita-reversion
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+````
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## Instalación
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+```bash
+bun install
+```
 
-## Join the community
+---
 
-Join our community of developers creating universal apps.
+## Ejecución
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+bunx expo start
+```
+
+---
+
+## Formas de abrir la aplicación
+
+### Dispositivo móvil
+
+1. Abrir Expo Go
+2. Escanear el código QR que aparece en la terminal
+
+---
+
+### Navegador web
+
+Abrir la URL que aparece en la terminal, por ejemplo:
+
+```
+http://localhost:8081
+```
+
+---
+
+## Uso de la aplicación
+
+- Generar sonido para aumentar el contador
+- A mayor intensidad, más rápido se revela el poema
+- Al dejar de hacer sonido:
+  - El contador disminuye
+  - El texto comienza a ocultarse
+
+- Cuando el poema se oculta completamente:
+  - Se ejecuta una transición
+  - Se carga un nuevo poema
+
+---
+
+## Arquitectura
+
+El proyecto sigue una separación clara de responsabilidades:
+
+### Controlador
+
+- ControladorDePoema
+- Orquesta la lógica general
+
+### Hooks (lógica)
+
+- useAudio: detección de sonido
+- useContadorDeSonido: manejo del contador
+- useReveladoDeTexto: revelado y ocultamiento del texto
+- usePoema: gestión de poemas
+- useAnimaciones: animaciones
+
+### UI
+
+- ContenedorPantallaPrincipal
+- Componentes visuales desacoplados
+
+---
+
+## Configuración
+
+Archivo:
+
+```
+src/constantes/configuracion.ts
+```
+
+Parámetros ajustables:
+
+- UMBRAL_SONIDO: sensibilidad del micrófono
+- FACTOR_REVELADO: velocidad de revelado
+- Tiempos de decremento del contador
+
+---
+
+## Solución de problemas
+
+### Reinstalar dependencias
+
+```bash
+bun install --force
+```
+
+---
+
+### Limpiar caché de Expo
+
+```bash
+bunx expo start -c
+```
+
+---
+
+### Problemas con el micrófono
+
+- Verificar permisos del sistema
+- Asegurarse de aceptar el acceso al iniciar la app
+
+---
+
+## Tecnologías utilizadas
+
+- React Native
+- Expo
+- expo-av
+- react-native-reanimated
+
+---
+
+## Notas finales
+
+Este proyecto combina entrada de audio en tiempo real con feedback visual dinámico.
+
+También funciona como ejemplo de:
+
+- Uso de hooks personalizados
+- Separación entre lógica y UI
+- Arquitectura escalable en React Native
+````
