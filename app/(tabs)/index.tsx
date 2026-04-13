@@ -1,8 +1,8 @@
 import { ThemedText } from "@/components/themed-text";
 import { ThemedView } from "@/components/themed-view";
 import { Audio } from "expo-av";
-import { useEffect, useRef, useState } from "react";
-import { Dimensions, ScrollView, StyleSheet } from "react-native";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Dimensions, StyleSheet, View } from "react-native";
 
 const POEMAS = [
   [
@@ -59,31 +59,19 @@ const { height } = Dimensions.get("window");
 
 export default function PantallaPrincipal() {
   const [contador, setContador] = useState(0);
-
   const [poemaIndex, setPoemaIndex] = useState(
     Math.floor(Math.random() * POEMAS.length),
   );
+  const [texto, setTexto] = useState<string[][]>([]);
 
   const poema = POEMAS[poemaIndex];
 
-  const [texto, setTexto] = useState<string[][]>([]);
-
-  const scrollRef = useRef<ScrollView>(null);
-
   const ultimoSonidoRef = useRef(Date.now());
   const ultimoDecrementoRef = useRef(Date.now());
-
-  const contadorAnteriorRef = useRef(0);
+  const contadorPrevioRef = useRef(0);
   const restoRef = useRef(0);
-
-  const cambioRealizadoRef = useRef(false);
-
-  const ultimoScrollRef = useRef(0);
-  const posicionesRef = useRef<number[]>([]);
-
   const todoReveladoRef = useRef(false);
-
-  const resetScrollRef = useRef(false);
+  const cambioPostpuestoRef = useRef(false);
 
   useEffect(() => {
     const inicial = poema.map((linea) =>
@@ -93,38 +81,16 @@ export default function PantallaPrincipal() {
     setTexto(inicial);
 
     restoRef.current = 0;
-    contadorAnteriorRef.current = 0;
-    posicionesRef.current = [];
-    ultimoScrollRef.current = 0;
-
-    resetScrollRef.current = true;
-  }, [poemaIndex]);
+    contadorPrevioRef.current = 0;
+  }, [poema]);
 
   useEffect(() => {
-    if (!resetScrollRef.current) return;
-
-    if (posicionesRef.current.length === 0) return;
-
-    const primera = posicionesRef.current[0];
-
-    if (primera != null) {
-      scrollRef.current?.scrollTo({
-        y: 0,
-        animated: true,
-      });
-
-      resetScrollRef.current = false;
-    }
-  }, [texto]);
-
-  useEffect(() => {
-    const completo = texto.every((linea, i) =>
+    todoReveladoRef.current = texto.every((linea, i) =>
       linea.every((c, j) => c === poema[i][j] || c === " "),
     );
-
-    todoReveladoRef.current = completo;
   }, [texto, poema]);
 
+  // 🎤 Audio
   useEffect(() => {
     let grabacion: Audio.Recording | null = null;
 
@@ -141,11 +107,7 @@ export default function PantallaPrincipal() {
 
       await grabacion.prepareToRecordAsync({
         isMeteringEnabled: true,
-        android: {
-          extension: ".m4a",
-          outputFormat: 2,
-          audioEncoder: 3,
-        },
+        android: { extension: ".m4a", outputFormat: 2, audioEncoder: 3 },
         ios: {
           extension: ".m4a",
           audioQuality: 2,
@@ -162,19 +124,14 @@ export default function PantallaPrincipal() {
       grabacion.setOnRecordingStatusUpdate((status) => {
         if (status.metering == null) return;
 
-        if (status.metering > -45) {
+        if (status.metering > -60) {
           ultimoSonidoRef.current = Date.now();
-
-          setContador((c) => {
-            if (todoReveladoRef.current) return c;
-            return c + 1;
-          });
+          setContador((c) => (todoReveladoRef.current ? c : c + 1));
         }
       });
     }
 
     iniciar();
-
     return () => {
       grabacion?.stopAndUnloadAsync().catch(() => {});
     };
@@ -202,64 +159,8 @@ export default function PantallaPrincipal() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    const diff = contador - contadorAnteriorRef.current;
-    contadorAnteriorRef.current = contador;
-
-    restoRef.current += diff;
-
-    while (restoRef.current >= 5) {
-      revelarLetra();
-      restoRef.current -= 5;
-    }
-
-    while (restoRef.current <= -5) {
-      ocultarLetra();
-      restoRef.current += 5;
-    }
-  }, [contador]);
-
-  useEffect(() => {
-    if (contador !== 0) {
-      cambioRealizadoRef.current = false;
-      return;
-    }
-
-    if (cambioRealizadoRef.current) return;
-
-    const todoBloqueado = texto.every((linea) =>
-      linea.every((c) => c === "*" || c === " "),
-    );
-
-    if (!todoBloqueado) return;
-
-    cambioRealizadoRef.current = true;
-
-    setPoemaIndex((prev) => {
-      let nuevo = prev;
-      while (nuevo === prev) {
-        nuevo = Math.floor(Math.random() * POEMAS.length);
-      }
-      return nuevo;
-    });
-  }, [contador, texto]);
-
-  function scrollSuave(linea: number) {
-    const ahora = Date.now();
-
-    if (ahora - ultimoScrollRef.current > 200) {
-      ultimoScrollRef.current = ahora;
-
-      const y = posicionesRef.current[linea] ?? 0;
-
-      scrollRef.current?.scrollTo({
-        y: y - height * 0.3,
-        animated: true,
-      });
-    }
-  }
-
-  function revelarLetra() {
+  // 🔓 Revelar
+  const revelarLetra = useCallback(() => {
     setTexto((prev) => {
       const nuevo = prev.map((l) => [...l]);
 
@@ -271,17 +172,15 @@ export default function PantallaPrincipal() {
         if (indices.length > 0) {
           const i = indices[Math.floor(Math.random() * indices.length)];
           nuevo[linea][i] = poema[linea][i];
-
-          scrollSuave(linea);
           return nuevo;
         }
       }
 
       return prev;
     });
-  }
+  }, [poema]);
 
-  function ocultarLetra() {
+  const ocultarLetra = useCallback(() => {
     setTexto((prev) => {
       const nuevo = prev.map((l) => [...l]);
 
@@ -293,42 +192,78 @@ export default function PantallaPrincipal() {
         if (indices.length > 0) {
           const i = indices[Math.floor(Math.random() * indices.length)];
           nuevo[linea][i] = "*";
-
-          scrollSuave(linea);
           return nuevo;
         }
       }
 
       return prev;
     });
-  }
+  }, []);
+
+  useEffect(() => {
+    const anterior = contadorPrevioRef.current;
+    const diff = contador - anterior;
+
+    restoRef.current += diff;
+    // para pruebas rapidas colocar en 1, luego en 5 para normalidad (que sino grito como vaca)
+    while (restoRef.current >= 1) {
+      revelarLetra();
+      restoRef.current -= 1;
+    }
+
+    while (restoRef.current <= -1) {
+      ocultarLetra();
+      restoRef.current += 1;
+    }
+
+    if (anterior === 0 && contador > 0) {
+      cambioPostpuestoRef.current = false;
+    }
+
+    if (anterior > 0 && contador === 0) {
+      cambioPostpuestoRef.current = true;
+    }
+
+    contadorPrevioRef.current = contador;
+  }, [contador, revelarLetra, ocultarLetra]);
+
+  useEffect(() => {
+    if (!cambioPostpuestoRef.current) return;
+    if (contador !== 0) return;
+
+    const todoBloqueado = texto.every((linea) =>
+      linea.every((c) => c === "*" || c === " "),
+    );
+
+    if (!todoBloqueado) return;
+
+    cambioPostpuestoRef.current = false;
+
+    setPoemaIndex((prev) => {
+      const posibles = POEMAS.map((_, i) => i).filter((i) => i !== prev);
+      return posibles[Math.floor(Math.random() * posibles.length)];
+    });
+  }, [texto, contador]);
 
   return (
     <ThemedView style={styles.container}>
-      <ThemedText style={styles.contador}>{Math.floor(contador)}</ThemedText>
+      <ThemedText style={styles.contador}>{contador}</ThemedText>
 
-      <ScrollView ref={scrollRef} style={styles.scroll} scrollEnabled={false}>
+      <View style={styles.contenido}>
         <ThemedText style={styles.titulo}>Chasquea</ThemedText>
 
         {texto.map((linea, i) => (
-          <ThemedText
-            key={i}
-            style={styles.linea}
-            onLayout={(e) => {
-              posicionesRef.current[i] = e.nativeEvent.layout.y;
-            }}
-          >
+          <ThemedText key={i} style={styles.linea}>
             {linea.join("")}
           </ThemedText>
         ))}
-      </ScrollView>
+      </View>
     </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
-
+  container: { flex: 1, justifyContent: "center", alignItems: "center" },
   contador: {
     position: "absolute",
     top: 40,
@@ -336,23 +271,21 @@ const styles = StyleSheet.create({
     fontSize: 18,
     zIndex: 10,
   },
-
   titulo: {
-    fontSize: 32,
-    lineHeight: 40,
+    fontSize: 28,
+    lineHeight: 36,
     textAlign: "center",
-    marginTop: height * 0.15,
-    marginBottom: height * 0.2,
+    marginBottom: height * 0.08,
+    fontWeight: "bold",
   },
-
-  scroll: {
-    marginTop: 120,
+  contenido: {
+    width: "90%",
+    justifyContent: "center",
   },
-
   linea: {
-    fontSize: 20,
-    lineHeight: 28,
+    fontSize: 16,
     textAlign: "center",
-    marginVertical: height * 0.2,
+    marginVertical: height * 0.04,
+    lineHeight: 24,
   },
 });
