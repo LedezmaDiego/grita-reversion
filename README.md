@@ -56,8 +56,6 @@ git clone <URL_DEL_REPO>
 cd grita-reversion
 ```
 
-````
-
 ---
 
 ## Instalación
@@ -192,4 +190,3 @@ También funciona como ejemplo de:
 - Uso de hooks personalizados
 - Separación entre lógica y UI
 - Arquitectura escalable en React Native
-````
