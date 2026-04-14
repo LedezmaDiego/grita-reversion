@@ -1,192 +1,86 @@
-# Chasquea (App Mobile)
+## Descargas
 
-Aplicación interactiva basada en sonido donde el usuario debe chasquear con sus dedos fuertemente para revelar progresivamente un poema.
-
-La intensidad del sonido controla tanto el avance del texto como las animaciones en pantalla.
-
----
-
-## Funcionalidades principales
-
-- Detección de sonido en tiempo real mediante micrófono
-- Contador dinámico basado en intensidad de audio
-- Revelado progresivo de texto
-- Ocultamiento automático cuando no hay sonido
-- Transiciones animadas entre poemas
-- Animaciones reactivas (escala, opacidad, color)
+- APK (Android):
+  https://github.com/LedezmaDiego/grita-reversion/releases/download/v1.0.0/chasquea-v1.0.0.apk
 
 ---
 
-## Requisitos previos
+## Instalación en dispositivo (Android)
 
-Antes de comenzar, instalar:
+Esta aplicación no es compatible con Expo Go, ya que utiliza funcionalidades nativas (audio en tiempo real).
 
-### 1. Node.js
+### Opción 1 — Instalar APK (recomendado)
 
-https://nodejs.org  
-Se recomienda versión LTS.
-
----
-
-### 2. Bun
-
-https://bun.sh
+1. Descargar la APK desde el enlace de la sección "Descargas"
+2. Transferir el archivo al dispositivo
+3. Abrir el archivo `.apk`
+4. Aceptar la instalación desde orígenes desconocidos si es necesario
+5. Instalar la aplicación
 
 ---
 
-### 3. Git
-
-https://git-scm.com/
-
----
-
-### 4. Expo Go (opcional)
-
-Para probar en dispositivo móvil:
-
-- Android: Play Store
-- iOS: App Store
-
----
-
-## Descargar el proyecto
+### Opción 2 — Build local (desarrolladores)
 
 ```bash
-git clone <URL_DEL_REPO>
-cd grita-reversion
+bunx expo prebuild
+bun run android
 ```
+
+Esto compila e instala la app en un dispositivo conectado por USB o en un emulador.
 
 ---
 
-## Instalación
+## Desarrollo
+
+Una vez instalada la app en el dispositivo:
 
 ```bash
-bun install
+bun start --dev-client
 ```
+
+Esto inicia el servidor de desarrollo (Metro).
 
 ---
 
-## Ejecución
+## Conexión con el dispositivo
+
+### Con USB
 
 ```bash
-bunx expo start
+adb reverse tcp:8081 tcp:8081
+bun start --dev-client
 ```
 
 ---
 
-## Formas de abrir la aplicación
-
-### Dispositivo móvil
-
-1. Abrir Expo Go
-2. Escanear el código QR que aparece en la terminal
-
----
-
-### Navegador web
-
-Abrir la URL que aparece en la terminal, por ejemplo:
-
-```
-http://localhost:8081
-```
-
----
-
-## Uso de la aplicación
-
-- Generar sonido para aumentar el contador
-- A mayor intensidad, más rápido se revela el poema
-- Al dejar de hacer sonido:
-  - El contador disminuye
-  - El texto comienza a ocultarse
-
-- Cuando el poema se oculta completamente:
-  - Se ejecuta una transición
-  - Se carga un nuevo poema
-
----
-
-## Arquitectura
-
-El proyecto sigue una separación clara de responsabilidades:
-
-### Controlador
-
-- ControladorDePoema
-- Orquesta la lógica general
-
-### Hooks (lógica)
-
-- useAudio: detección de sonido
-- useContadorDeSonido: manejo del contador
-- useReveladoDeTexto: revelado y ocultamiento del texto
-- usePoema: gestión de poemas
-- useAnimaciones: animaciones
-
-### UI
-
-- ContenedorPantallaPrincipal
-- Componentes visuales desacoplados
-
----
-
-## Configuración
-
-Archivo:
-
-```
-src/constantes/configuracion.ts
-```
-
-Parámetros ajustables:
-
-- UMBRAL_SONIDO: sensibilidad del micrófono
-- FACTOR_REVELADO: velocidad de revelado
-- Tiempos de decremento del contador
-
----
-
-## Solución de problemas
-
-### Reinstalar dependencias
+### Sin USB
 
 ```bash
-bun install --force
+bunx expo start --dev-client --tunnel
 ```
 
 ---
 
-### Limpiar caché de Expo
+## Notas importantes
+
+- No funciona con Expo Go
+- Requiere instalación previa de la APK
+- Los cambios en código JavaScript se reflejan en tiempo real
+- Los cambios nativos requieren recompilación de la app
+
+---
+
+## Cuándo recompilar la app
+
+Ejecutar:
 
 ```bash
-bunx expo start -c
+bun run android
 ```
 
----
+Si se realizaron cambios en:
 
-### Problemas con el micrófono
-
-- Verificar permisos del sistema
-- Asegurarse de aceptar el acceso al iniciar la app
-
----
-
-## Tecnologías utilizadas
-
-- React Native
-- Expo
-- expo-av
-- react-native-reanimated
-
----
-
-## Notas finales
-
-Este proyecto combina entrada de audio en tiempo real con feedback visual dinámico.
-
-También funciona como ejemplo de:
-
-- Uso de hooks personalizados
-- Separación entre lógica y UI
-- Arquitectura escalable en React Native
+- permisos (`app.json`)
+- librerías nativas
+- plugins de Expo
+- código dentro de `/android`
